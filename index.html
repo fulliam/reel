@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Spin Wheel</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      background-color: #1e1e1e; 
+      overflow: hidden;
+    }
+
+    .wheel {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
+      background-image: conic-gradient(
+        rgba(246, 28, 181, 0.6) 16.67%,
+        rgba(137, 34, 207, 0.6) 0 33.33%,
+        rgba(133, 133, 255, 0.6) 0 50%,
+        rgba(254, 254, 60, 0.6) 0 66.67%,
+        rgba(255, 136, 50, 0.6) 0 83.33%,
+        rgba(254, 89, 89, 0.6) 0
+      );
+      border: 1px solid black; /* Добавление черной границы с толщиной 1px */
+      animation: shadowDelay 3s ease-in-out infinite;
+    }
+
+    @keyframes shadowDelay {
+      0% {
+        box-shadow: none; 
+      }
+      50% {
+        box-shadow: 0px 0px 20px pink; 
+      }       
+      100% {
+        box-shadow: none; 
+      } 
+    }
+
+    .arrow {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      border: solid #ccc;
+      border-width: 0 7px 7px 0;
+      display: inline-block;
+      padding: 7px;
+      rotate: 135deg; 
+    }
+
+    .result {
+      margin: 20px;
+      width: 80%;
+      height: 25%;
+      color: #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      border-radius: 20px;
+      box-shadow: inset 0px 0px 10px black;
+    }
+
+    .rotating {
+      transition: all 3s;
+      transition-timing: ease-in-out; 
+    }
+
+    .button-rainbow {
+      --border-radius: 24px;
+      --border-width: 8px;
+
+      appearance: none;
+      position: absolute;
+      bottom: 10%;
+      border: 0;
+      background-color: transparent;
+      font-family: "Montserrat", sans-serif;
+      font-size: 30px;
+      font-weight: 600;
+      color: #fff;
+      width: 200px;
+      height: 50px;
+      align-items: end;
+      display: flex;
+      justify-content: center;
+    }
+
+    .button-rainbow::after {
+      --m-i: linear-gradient(#000, #000);
+      --m-o: content-box, padding-box;
+
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      padding: var(--border-width);
+      border-radius: var(--border-radius);
+      background-image: conic-gradient(
+        #488cfb,
+        #29dbbc,
+        #ddf505,
+        #ff9f0e,
+        #e440bb,
+        #655adc,
+        #488cfb
+      );
+
+      mask-image: var(--m-i), var(--m-i);
+      mask-origin: var(--m-o);
+      mask-clip: var(--m-o);
+      mask-composite: exclude;
+      -webkit-mask-composite: destination-out;
+
+      filter: hue-rotate(0);
+      animation: hue linear 1s infinite;
+    }
+
+    @keyframes hue {
+      to {
+        filter: hue-rotate(1turn);
+      }
+    }
+
+    dialog {
+      position: fixed;
+      background-color: #0e1518;
+      border-radius: 10px;
+      display: none;
+      width: 74%;
+      height: 100%;
+      animation: shadowDelay 3s ease-in-out infinite;
+    }
+
+    dialog[open] {
+      opacity: 1;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 1.5s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wheel rotating"></div>
+  <div class="arrow"></div>
+  <button class="spin button-rainbow">Spin</button>
+  <dialog id="modal">
+    <div class="result">WIN COLOR</div>
+    <button onclick="document.getElementById('modal').close()" class="button-rainbow">Close</button>
+  </dialog>
+
+  <script>
+    function promiseAfterTimeout(seconds) {
+      return new Promise(function (resolve) {
+        setTimeout(() => resolve(), seconds*1000);
+      });
+    }
+
+    function rotateWheel(degr) {
+      let wheel = document.querySelector('.wheel');
+      wheel.style.transform = 'rotate('+degr+'deg)';
+      return promiseAfterTimeout(0.6 * 5);
+    }
+
+    function randomDegrees() {
+      let randomFloat = Math.random()*360;
+      let descreetDegrees = Math.round(randomFloat / 60) * 60 * 10;
+      return descreetDegrees;
+    }
+
+    function getCurrentColor(currentDegrees) {
+      let colors = [
+        "rgba(137, 34, 207, 0.6)", 
+        "rgba(246, 28, 181, 0.6)", 
+        "rgba(254, 89, 89, 0.6)", 
+        "rgba(255, 136, 50, 0.6)", 
+        "rgba(254, 254, 60, 0.6)", 
+        "rgba(133, 133, 255, 0.6)"
+      ];
+      let segmentCount = parseInt(currentDegrees / 60);
+      let segmentShift = segmentCount % colors.length;
+
+      return colors[segmentShift];
+    }
+
+    function launchSpin() {
+      currentRotation += randomDegrees();
+
+      rotateWheel(currentRotation)
+        .then(() => {
+          let winColor = getCurrentColor(currentRotation);
+          let result = document.querySelector('.result');
+          result.style.backgroundColor = winColor;
+          document.getElementById('modal').showModal();
+        });
+    }
+
+    let currentRotation = 0;
+    let spinButton = document.querySelector('.spin');
+    spinButton.addEventListener('click', launchSpin);
+  </script>
+</body>
+</html>
